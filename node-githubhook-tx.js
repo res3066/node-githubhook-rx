@@ -14,7 +14,7 @@ let ts = now.toISOString();
 
 const data = JSON.stringify({
     psst: 'Fake Github here...',
-    timestamp: ts
+    updated_at: ts 
 })
 
 let sig = "sha1=" + crypto.createHmac('sha1', secret).update(data).digest('hex');
