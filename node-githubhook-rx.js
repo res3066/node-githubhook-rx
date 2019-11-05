@@ -11,6 +11,10 @@
 const secret = process.env.SECRET ? process.env.SECRET : 'badsecret';
 const port = process.env.PORT ? process.env.PORT : 8080;
 
+// milliseconds in replay-allowed window
+// 300000 ms is five minutes.
+const timeslopms = process.env.TIMESLOP ? process.env.TIMESLOP : 300000;
+
 // COMMANDS environment variable is a json array of commands things to run.
 // All normal environment variables are passed through so stuff like
 // GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone user@host
@@ -22,8 +26,7 @@ const commands = process.env.COMMANDS ? process.env.COMMANDS :
       ['git fetch origin master',
        'git reset --hard origin/master',
        'git pull origin master --force',
-       'printenv',
-       // your build commands here                                                                                                                        
+       // your build commands here 
        'true'];
 
 /////////////////
@@ -46,41 +49,55 @@ var server = http.createServer(function (req, res) {
 	    bod.push(chunk);
 	}
     }).on('end', () => {
-        console.log(bod.length + " chunks");
 	bod = Buffer.concat(bod).toString();
 
 	let sig = "sha1=" + crypto.createHmac('sha1', secret).update(bod).digest('hex');
-
 
 	var remoteaddr = req.socket.remoteAddress.substr(0,7) == "::ffff:" ? req.socket.remoteAddress.substr(7) : req.socket.remoteAddress ;
 
         if (((req.headers['x-github-event'] == 'push') || (req.headers['x-github-event'] == 'ping')) &&
 	    (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(req.headers['x-hub-signature'])))) {
 
-	    res.writeHead(200, {
-		"Content-Type": "text/plain",
-		"Server": "ClueTrust-GithubHook-rx-0.1a",
-		"Cache-Control": "no-cache" });
+	    let posted = Date.parse(JSON.parse(bod).hook.updated_at);
+	    let now = new Date();
 
-	    res.write('Hello Github!');
+    	    console.log(now - posted);
 
-	    // this stalls the event loop while spawned processes complete.
-	    // we are good with this.
-	    // should only take a couple of seconds for a git update
-	    for (const cmd of commands) {
+	    if (timeslopms > Math.abs(now - posted)) {
+
+		res.writeHead(200, {
+		    "Content-Type": "text/plain",
+		    "Server": "ClueTrust-GithubHook-rx-0.1a",
+		    "Cache-Control": "no-cache" });
+
+		res.write('Hello Github!');
+
+		// this stalls the event loop while spawned processes complete.
+		// we are good with this.
+		// should only take a couple of seconds for a git update
+		for (const cmd of commands) {
+		    let now = new Date();
+		    let ts = now.toISOString();
+		    console.log('Executing \"' + cmd + '\" at ' + ts);
+		    let cmdout = execSync(cmd).toString();
+		    console.log(cmdout);
+		}
+
 		let now = new Date();
 		let ts = now.toISOString();
-		console.log('Executing \"' + cmd + '\" at ' + ts);
-		let cmdout = execSync(cmd).toString();
-		console.log(cmdout);
+
+		console.log('finished processing hook by request of ' + remoteaddr + ' at ' + ts);
+	    } else { // time out of spec, suspect ntp issues or shenanigans
+		res.writeHead(403, {
+		    "Content-Type": "text/plain",
+		    "Server": "ClueTrust-GithubHook-rx-0.1a",
+		    "Cache-Control": "no-cache" });
+		res.write('timestamp out of window');
+		let now = new Date();
+		let ts = now.toISOString();
+		console.log('timestamp out of window from ' +  remoteaddr + ' at ' + ts);
 	    }
-
-	    let now = new Date();
-	    let ts = now.toISOString();
-
-	    console.log('finished processing hook by request of ' + remoteaddr + ' at ' + ts);
-
-	} else {
+	} else { // signature incorrect
 
 	    res.writeHead(403, {
 		"Content-Type": "text/plain",

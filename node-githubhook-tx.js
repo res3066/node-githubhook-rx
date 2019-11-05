@@ -13,8 +13,13 @@ let now = new Date();
 let ts = now.toISOString();
 
 const data = JSON.stringify({
-    psst: 'Fake Github here...',
-    updated_at: ts 
+  psst: 'Fake Github here...',
+  "hook": {
+    "events": [
+      "push"
+    ],
+    updated_at: ts
+  }
 })
 
 let sig = "sha1=" + crypto.createHmac('sha1', secret).update(data).digest('hex');
