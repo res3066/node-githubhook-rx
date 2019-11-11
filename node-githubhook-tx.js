@@ -10,17 +10,19 @@ const crypto = require('crypto');
 const secret = process.env.SECRET ? process.env.SECRET : 'badsecret';
 
 let now = new Date();
-let ts = now.toISOString();
+let ts = now / 1000;
 
 const data = JSON.stringify({
-  psst: 'Fake Github here...',
-  "hook": {
-    "events": [
-      "push"
-    ],
-    updated_at: ts
-  }
-})
+    psst: 'Fake Github here...',
+    hook: {
+	events: [
+	    "push"
+	],
+	updated_at: ts
+    },
+    repository: {
+	pushed_at: ts
+    }});
 
 let sig = "sha1=" + crypto.createHmac('sha1', secret).update(data).digest('hex');
 

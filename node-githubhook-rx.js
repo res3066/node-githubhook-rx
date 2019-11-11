@@ -58,10 +58,11 @@ var server = http.createServer(function (req, res) {
         if (((req.headers['x-github-event'] == 'push') || (req.headers['x-github-event'] == 'ping')) &&
 	    (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(req.headers['x-hub-signature'])))) {
 
-	    let posted = Date.parse(JSON.parse(bod).hook.updated_at);
+	    try {
+		var posted = new Date(JSON.parse(bod).repository.pushed_at * 1000);
+	    } catch (e) {}
+	    
 	    let now = new Date();
-
-    	    console.log(now - posted);
 
 	    if (timeslopms > Math.abs(now - posted)) {
 
