@@ -22,7 +22,7 @@ There is basic replay attack protection - we crawl the json and enforce timestam
 
 Suggested improvements:
 
-- Receiver should crawl the posted JSON, enforce timestamp constraints from .updated_at or .repository.pushed_at to minimize window for replay attacks.
+- DONE: Receiver should crawl the posted JSON, enforce timestamp constraints from .updated_at or .repository.pushed_at to minimize window for replay attacks.
 
 - https pointing to the same certs that nginx, apache, etc. uses
 
