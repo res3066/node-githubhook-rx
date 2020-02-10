@@ -8,12 +8,18 @@
 // things imported from the environment with decent defaults (or explicitly bad one
 // for the secret
 
+// takes a single argv - the full path of the script to run upon successful authentication.
+
+
 const secret = process.env.SECRET ? process.env.SECRET : 'badsecret';
 const port = process.env.PORT ? process.env.PORT : 8080;
 
 // milliseconds in replay-allowed window
 // 300000 ms is five minutes.
 const timeslopms = process.env.TIMESLOP ? process.env.TIMESLOP : 300000;
+
+// COMMANDS array in the env turned out to be escaping/quoting hell.
+// Just passing a script to run now.  Pbbbt.
 
 // COMMANDS environment variable is a json array of commands things to run.
 // All normal environment variables are passed through so stuff like
@@ -22,12 +28,13 @@ const timeslopms = process.env.TIMESLOP ? process.env.TIMESLOP : 300000;
 // GIT_SSH (beware)
 // will be passed in, BUT in the particular case of ssh you are probably better off using
 // ~updateuser/.ssh/config
-const commands = process.env.COMMANDS ? process.env.COMMANDS :
-      ['git fetch origin master',
-       'git reset --hard origin/master',
-       'git pull origin master --force',
+//const commands = process.env.COMMANDS ? JSON.parse(process.env.COMMANDS) :
+//      ['git fetch origin master',
+//       'git reset --hard origin/master',
+//      'git pull origin master --force',
+//        [ '/home/rs/run-githooks.sh' ];
        // your build commands here 
-       'true'];
+//       'true'];
 
 /////////////////
 
@@ -76,16 +83,23 @@ var server = http.createServer(function (req, res) {
 		// this stalls the event loop while spawned processes complete.
 		// we are good with this.
 		// should only take a couple of seconds for a git update
-		for (const cmd of commands) {
-		    let now = new Date();
-		    let ts = now.toISOString();
-		    console.log('Executing \"' + cmd + '\" at ' + ts);
-		    let cmdout = execSync(cmd).toString();
-		    console.log(cmdout);
-		}
+//		for (const cmd of commands) {
+//		    let now = new Date();
+//		    let ts = now.toISOString();
+//		    console.log('Executing \"' + cmd + '\" at ' + ts);
+//		    let cmdout = execSync(cmd).toString();
+//		    console.log(cmdout);
+//		}
 
-		let now = new Date();
-		let ts = now.toISOString();
+// instead of iterating over a list, just run the script (full path in argv[2])
+                let ts = now.toISOString();
+                console.log('Executing \"' + process.argv[2] + '\" at ' + ts);
+                let cmdout = execSync(process.argv[2]).toString();
+                console.log(cmdout);
+
+
+		now = new Date();
+		ts = now.toISOString();
 
 		console.log('finished processing hook by request of ' + remoteaddr + ' at ' + ts);
 	    } else { // time out of spec, suspect ntp issues or shenanigans
